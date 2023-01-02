@@ -11,7 +11,9 @@ import {
   ViewStyle,
   LayoutChangeEvent,
   NativeSyntheticEvent,
-  NativeScrollEvent
+  NativeScrollEvent,
+  Platform,
+  TouchableOpacity
 } from 'react-native';
 
 import {extractCalendarListProps, extractReservationListProps} from '../componentUpdater';
@@ -149,6 +151,16 @@ export default class Agenda extends Component<AgendaProps, State> {
       }
     } else if (!prevProps.items) {
       this.loadReservations(this.props);
+    }
+
+    // when using react-navigation and the page unfocused and refocus again
+    if (Platform.OS === 'web') {
+      // the calendar collapse
+      if (this.state.calendarScrollable && prevState.calendarScrollable) {
+        this.setScrollPadPosition(0, false);
+      }
+      // it loose the day selection scroll
+      this.calendar?.current?.scrollToDay(this.state.selectedDay, this.calendarOffset() + 1, false);
     }
   }
 
@@ -374,6 +386,11 @@ export default class Agenda extends Component<AgendaProps, State> {
     );
   }
 
+  onKnobPressed = () => {
+    const isOpen = this.state.calendarScrollable;
+    this.toggleCalendarPosition(!isOpen);
+  }
+
   renderKnob() {
     const {showClosingKnob, hideKnob, renderKnob} = this.props;
     let knob: JSX.Element | null = <View style={this.style.knobContainer} />;
@@ -485,10 +502,12 @@ export default class Agenda extends Component<AgendaProps, State> {
           onScrollEndDrag={this.onSnapAfterDrag}
           onScroll={Animated.event([{nativeEvent: {contentOffset: {y: this.state.scrollY}}}], {useNativeDriver: true})}
         >
-          <View
+          {/* to support web as well, by allowing calendar to open by pressing the knob */ }
+          <TouchableOpacity
             testID={AGENDA_CALENDAR_KNOB}
             style={{height: agendaHeight + KNOB_HEIGHT}}
             onLayout={this.onScrollPadLayout}
+            onPress={this.onKnobPressed}
           />
         </Animated.ScrollView>
       </View>
